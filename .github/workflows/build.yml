@@ -47,4 +47,31 @@ jobs:
           if (-not (Test-Path -LiteralPath $binary)) {
             throw "Expected legacy output missing: $binary"
           }
-          Write-Host "Legacy executable built successfully. NOT executed or published."
+          Write-Host "Legacy executable built successfully. NOT executed; only published as a clearly labeled CI test artifact."
+
+      - name: Create safety notice for test artifact
+        shell: pwsh
+        run: |
+          @'
+          MR. KIMBO Optimizer v17 - CI TEST ARTIFACT ONLY
+          
+          WARNING: This file is the unmodified Hellzerg Optimizer v16.7 code compiled by GitHub Actions.
+          It is NOT MR. KIMBO Optimizer v17.0 and has not been functionally or security tested.
+          The legacy application may request administrator privileges and contains features that disable
+          Windows Update, Windows Security/Defender, System Restore and other system services.
+          DO NOT RUN ON YOUR GAMING/STREAMING PC OR ANY PRODUCTION COMPUTER.
+          This package exists only for isolated lab or VM review, not a public release.
+          License: GPL-3.0. Original project: https://github.com/hellzerg/optimizer
+          '@ | Set-Content -LiteralPath 'bin/release/READ-ME-FIRST.txt' -Encoding utf8
+
+      - name: Upload untested legacy binary for isolated analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: LEGACY-16.7-UNTESTED-NOT-V17
+          path: |
+            bin/release/*.exe
+            bin/release/*.dll
+            bin/release/*.config
+            bin/release/READ-ME-FIRST.txt
+          if-no-files-found: error
+          retention-days: 7
