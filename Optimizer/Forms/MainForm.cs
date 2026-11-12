@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -228,77 +228,137 @@ namespace Optimizer
             }
         }
 
+        private void BindOptimizationToggle(ToggleCard card, EventHandler handler)
+        {
+            bool scoped = universalTab.Contains(card) || windows10Tab.Contains(card);
+            if (!scoped)
+            {
+                card.ToggleClicked += handler;
+                return;
+            }
+
+            bool restoring = false;
+            card.ToggleClicked += (sender, args) =>
+            {
+                if (restoring) return;
+
+                bool previous = !card.ToggleChecked;
+                string reason = ToggleCompatibility.GetBlockReason(ReadWindowsBuild(), card.Name);
+                if (reason == null)
+                {
+                    try
+                    {
+                        handler(sender, args);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(handler.Method.Name, ex.Message, ex.ToString());
+                        reason = "The adjustment failed. Windows changes may have been partially applied. See Optimizer.log.";
+                    }
+                }
+
+                restoring = true;
+                try
+                {
+                    card.ToggleChecked = previous;
+                }
+                finally
+                {
+                    restoring = false;
+                }
+
+                MessageBox.Show(this, reason, card.LabelText, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            };
+        }
+
+        private static int ReadWindowsBuild()
+        {
+            try
+            {
+                object value = Microsoft.Win32.Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "CurrentBuildNumber", null);
+                int build;
+                return int.TryParse(value as string, out build) ? build : 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(ReadWindowsBuild), ex.Message, ex.ToString());
+                return 0;
+            }
+        }
+
         private void EnableToggleEvents()
         {
-            officeTelemetrySw.ToggleClicked += new EventHandler(toggleSwitch12_Click);
-            telemetryTasksSw.ToggleClicked += new EventHandler(toggleSwitch11_Click);
-            superfetchSw.ToggleClicked += new EventHandler(toggleSwitch10_Click);
-            homegroupSw.ToggleClicked += new EventHandler(toggleSwitch9_Click);
-            reportingSw.ToggleClicked += new EventHandler(toggleSwitch8_Click);
-            mediaSharingSw.ToggleClicked += new EventHandler(toggleSwitch6_Click);
-            printSw.ToggleClicked += new EventHandler(toggleSwitch5_Click);
-            systemRestoreSw.ToggleClicked += new EventHandler(toggleSwitch4_Click);
-            performanceSw.ToggleClicked += new EventHandler(toggleSwitch1_Click);
-            noMenuDelaySw.ToggleClicked += new EventHandler(NoMenuDelaySw_ToggleClicked);
-            allTrayIconsSw.ToggleClicked += new EventHandler(AllTrayIconsSw_ToggleClicked);
-            defenderSw.ToggleClicked += new EventHandler(toggleSwitch3_Click);
-            networkSw.ToggleClicked += new EventHandler(toggleSwitch2_Click);
-            spellSw.ToggleClicked += new EventHandler(toggleSwitch28_Click);
-            inkSw.ToggleClicked += new EventHandler(toggleSwitch29_Click);
-            driversSw.ToggleClicked += new EventHandler(toggleSwitch30_Click);
-            sensorSw.ToggleClicked += new EventHandler(toggleSwitch20_Click);
-            privacySw.ToggleClicked += new EventHandler(toggleSwitch21_Click);
-            telemetryServicesSw.ToggleClicked += new EventHandler(toggleSwitch23_Click);
-            autoUpdatesSw.ToggleClicked += new EventHandler(toggleSwitch24_Click);
-            peopleSw.ToggleClicked += new EventHandler(toggleSwitch25_Click);
-            adsSw.ToggleClicked += new EventHandler(toggleSwitch26_Click);
-            xboxSw.ToggleClicked += new EventHandler(toggleSwitch17_Click);
-            cortanaSw.ToggleClicked += new EventHandler(toggleSwitch16_Click);
-            edgeAiSw.ToggleClicked += new EventHandler(EdgeAiSw_ToggleClicked);
-            edgeTelemetrySw.ToggleClicked += new EventHandler(EdgeTelemetrySw_ToggleClicked);
-            gameBarSw.ToggleClicked += new EventHandler(toggleSwitch15_Click);
-            uODSw.ToggleClicked += new EventHandler(toggleSwitch14_Click);
-            oldMixerSw.ToggleClicked += new EventHandler(toggleSwitch13_Click);
-            disableOneDriveSw.ToggleClicked += new EventHandler(toggleSwitch31_Click);
-            oldExplorerSw.ToggleClicked += new EventHandler(toggleSwitch18_Click);
-            compatSw.ToggleClicked += new EventHandler(toggleSwitch32_Click);
-            faxSw.ToggleClicked += new EventHandler(ToggleSwitch33_Click);
-            insiderSw.ToggleClicked += new EventHandler(ToggleSwitch34_Click);
-            storeUpdatesSw.ToggleClicked += new EventHandler(ToggleSwitch35_Click);
-            smartScreenSw.ToggleClicked += new EventHandler(ToggleSwitch36_Click);
-            ccSw.ToggleClicked += new EventHandler(ToggleSwitch37_Click);
-            stickySw.ToggleClicked += new EventHandler(ToggleSwitch38_Click);
-            longPathsSw.ToggleClicked += new EventHandler(ToggleSwitch39_Click);
-            castSw.ToggleClicked += new EventHandler(ToggleSwitch40_Click);
-            leftTaskbarSw.ToggleClicked += new EventHandler(LeftTaskbarSw_Click);
-            snapAssistSw.ToggleClicked += new EventHandler(SnapAssistSw_Click);
-            widgetsSw.ToggleClicked += new EventHandler(WidgetsSw_Click);
-            chatSw.ToggleClicked += new EventHandler(chatSw_Click);
-            stickersSw.ToggleClicked += new EventHandler(StickersSw_ToggleClicked);
-            classicContextSw.ToggleClicked += new EventHandler(ClassicContextSw_Click);
-            ffTelemetrySw.ToggleClicked += new EventHandler(FfTelemetrySw_ToggleClicked);
-            chromeTelemetrySw.ToggleClicked += new EventHandler(ChromeTelemetrySw_ToggleClicked);
-            vsSw.ToggleClicked += new EventHandler(VsSw_ToggleClicked);
-            gameModeSw.ToggleClicked += new EventHandler(GameModeSw_ToggleClicked);
-            compactModeSw.ToggleClicked += CompactModeSw_ToggleClicked;
-            tpmSw.ToggleClicked += TpmSw_ToggleClicked;
-            hibernateSw.ToggleClicked += HibernateSw_ToggleClicked;
-            smb1Sw.ToggleClicked += Smb1Sw_ToggleClicked;
-            smb2Sw.ToggleClicked += Smb2Sw_ToggleClicked;
-            ntfsStampSw.ToggleClicked += NtfsStampSw_ToggleClicked;
-            winSearchSw.ToggleClicked += WinSearchSw_ToggleClicked;
-            nvidiaTelemetrySw.ToggleClicked += NvidiaTelemetrySw_ToggleClicked;
-            vbsSw.ToggleClicked += VbsSw_ToggleClicked;
-            hpetSw.ToggleClicked += HpetSw_ToggleClicked;
-            loginVerboseSw.ToggleClicked += LoginVerboseSw_ToggleClicked;
-            classicPhotoViewerSw.ToggleClicked += ClassicPhotoViewerSw_ToggleClicked;
-            copilotSw.ToggleClicked += CopilotSw_ToggleClicked;
-            hideWeatherSw.ToggleClicked += HideWeatherSw_ToggleClicked;
-            hideSearchSw.ToggleClicked += HideSearchSw_ToggleClicked;
-            modernStandbySw.ToggleClicked += ModernStandbySw_ToggleClicked;
-            newsInterestsSw.ToggleClicked += NewsInterestsSw_ToggleClicked;
-            enableUtcSw.ToggleClicked += EnableUtcSw_ToggleClicked;
-            regBackupSw.ToggleClicked += RegBackupSw_ToggleClicked;
+            BindOptimizationToggle(officeTelemetrySw, toggleSwitch12_Click);
+            BindOptimizationToggle(telemetryTasksSw, toggleSwitch11_Click);
+            BindOptimizationToggle(superfetchSw, toggleSwitch10_Click);
+            BindOptimizationToggle(homegroupSw, toggleSwitch9_Click);
+            BindOptimizationToggle(reportingSw, toggleSwitch8_Click);
+            BindOptimizationToggle(mediaSharingSw, toggleSwitch6_Click);
+            BindOptimizationToggle(printSw, toggleSwitch5_Click);
+            BindOptimizationToggle(systemRestoreSw, toggleSwitch4_Click);
+            BindOptimizationToggle(performanceSw, toggleSwitch1_Click);
+            BindOptimizationToggle(noMenuDelaySw, NoMenuDelaySw_ToggleClicked);
+            BindOptimizationToggle(allTrayIconsSw, AllTrayIconsSw_ToggleClicked);
+            BindOptimizationToggle(defenderSw, toggleSwitch3_Click);
+            BindOptimizationToggle(networkSw, toggleSwitch2_Click);
+            BindOptimizationToggle(spellSw, toggleSwitch28_Click);
+            BindOptimizationToggle(inkSw, toggleSwitch29_Click);
+            BindOptimizationToggle(driversSw, toggleSwitch30_Click);
+            BindOptimizationToggle(sensorSw, toggleSwitch20_Click);
+            BindOptimizationToggle(privacySw, toggleSwitch21_Click);
+            BindOptimizationToggle(telemetryServicesSw, toggleSwitch23_Click);
+            BindOptimizationToggle(autoUpdatesSw, toggleSwitch24_Click);
+            BindOptimizationToggle(peopleSw, toggleSwitch25_Click);
+            BindOptimizationToggle(adsSw, toggleSwitch26_Click);
+            BindOptimizationToggle(xboxSw, toggleSwitch17_Click);
+            BindOptimizationToggle(cortanaSw, toggleSwitch16_Click);
+            BindOptimizationToggle(edgeAiSw, EdgeAiSw_ToggleClicked);
+            BindOptimizationToggle(edgeTelemetrySw, EdgeTelemetrySw_ToggleClicked);
+            BindOptimizationToggle(gameBarSw, toggleSwitch15_Click);
+            BindOptimizationToggle(uODSw, toggleSwitch14_Click);
+            BindOptimizationToggle(oldMixerSw, toggleSwitch13_Click);
+            BindOptimizationToggle(disableOneDriveSw, toggleSwitch31_Click);
+            BindOptimizationToggle(oldExplorerSw, toggleSwitch18_Click);
+            BindOptimizationToggle(compatSw, toggleSwitch32_Click);
+            BindOptimizationToggle(faxSw, ToggleSwitch33_Click);
+            BindOptimizationToggle(insiderSw, ToggleSwitch34_Click);
+            BindOptimizationToggle(storeUpdatesSw, ToggleSwitch35_Click);
+            BindOptimizationToggle(smartScreenSw, ToggleSwitch36_Click);
+            BindOptimizationToggle(ccSw, ToggleSwitch37_Click);
+            BindOptimizationToggle(stickySw, ToggleSwitch38_Click);
+            BindOptimizationToggle(longPathsSw, ToggleSwitch39_Click);
+            BindOptimizationToggle(castSw, ToggleSwitch40_Click);
+            BindOptimizationToggle(leftTaskbarSw, LeftTaskbarSw_Click);
+            BindOptimizationToggle(snapAssistSw, SnapAssistSw_Click);
+            BindOptimizationToggle(widgetsSw, WidgetsSw_Click);
+            BindOptimizationToggle(chatSw, chatSw_Click);
+            BindOptimizationToggle(stickersSw, StickersSw_ToggleClicked);
+            BindOptimizationToggle(classicContextSw, ClassicContextSw_Click);
+            BindOptimizationToggle(ffTelemetrySw, FfTelemetrySw_ToggleClicked);
+            BindOptimizationToggle(chromeTelemetrySw, ChromeTelemetrySw_ToggleClicked);
+            BindOptimizationToggle(vsSw, VsSw_ToggleClicked);
+            BindOptimizationToggle(gameModeSw, GameModeSw_ToggleClicked);
+            BindOptimizationToggle(compactModeSw, CompactModeSw_ToggleClicked);
+            BindOptimizationToggle(tpmSw, TpmSw_ToggleClicked);
+            BindOptimizationToggle(hibernateSw, HibernateSw_ToggleClicked);
+            BindOptimizationToggle(smb1Sw, Smb1Sw_ToggleClicked);
+            BindOptimizationToggle(smb2Sw, Smb2Sw_ToggleClicked);
+            BindOptimizationToggle(ntfsStampSw, NtfsStampSw_ToggleClicked);
+            BindOptimizationToggle(winSearchSw, WinSearchSw_ToggleClicked);
+            BindOptimizationToggle(nvidiaTelemetrySw, NvidiaTelemetrySw_ToggleClicked);
+            BindOptimizationToggle(vbsSw, VbsSw_ToggleClicked);
+            BindOptimizationToggle(hpetSw, HpetSw_ToggleClicked);
+            BindOptimizationToggle(loginVerboseSw, LoginVerboseSw_ToggleClicked);
+            BindOptimizationToggle(classicPhotoViewerSw, ClassicPhotoViewerSw_ToggleClicked);
+            BindOptimizationToggle(copilotSw, CopilotSw_ToggleClicked);
+            BindOptimizationToggle(hideWeatherSw, HideWeatherSw_ToggleClicked);
+            BindOptimizationToggle(hideSearchSw, HideSearchSw_ToggleClicked);
+            BindOptimizationToggle(modernStandbySw, ModernStandbySw_ToggleClicked);
+            BindOptimizationToggle(newsInterestsSw, NewsInterestsSw_ToggleClicked);
+            BindOptimizationToggle(enableUtcSw, EnableUtcSw_ToggleClicked);
+            BindOptimizationToggle(regBackupSw, RegBackupSw_ToggleClicked);
 
             PMB.ToggleClicked += PMB_ToggleClicked;
             SSB.ToggleClicked += SSB_ToggleClicked;

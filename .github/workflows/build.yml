@@ -1,29 +1,81 @@
-name: Build
+name: MR KIMBO v17 - Legacy baseline CI
 
 on:
+  push:
+    branches:
+      - 'feature/v17-*'
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build
+  legacy-baseline:
+    name: Restore, inspect and build legacy source (no execution)
     runs-on: windows-2022
+    timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-    - name: Setup NuGet
-      uses: nuget/setup-nuget@v1
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
 
-    - name: Navigate to Workspace
-      run: cd $GITHUB_WORKSPACE
+      - name: Inspect legacy risk hooks (read-only)
+        shell: pwsh
+        run: ./scripts/Inspect-LegacyRisk.ps1
 
-    - name: Restore Packages
-      run: nuget restore Optimizer.sln
+      - name: Verify toggle compatibility decisions and registrations
+        shell: pwsh
+        run: ./scripts/Test-ToggleCompatibility.ps1
 
-    - name: Build Solution
-      run: msbuild.exe Optimizer.sln
+      - name: Restore legacy NuGet packages
+        shell: pwsh
+        run: nuget restore Optimizer.sln -NonInteractive
+
+      - name: Build inherited WinForms solution
+        shell: pwsh
+        run: msbuild.exe Optimizer.sln /t:Build /p:Configuration=Release "/p:Platform=Any CPU" /m /verbosity:minimal
+
+      - name: Confirm built binary exists (do not run)
+        shell: pwsh
+        run: |
+          $binary = Join-Path $env:GITHUB_WORKSPACE 'bin/release/Optimizer.exe'
+          if (-not (Test-Path -LiteralPath $binary)) {
+            throw "Expected legacy output missing: $binary"
+          }
+          Write-Host "Legacy executable built successfully. NOT executed; only published as a clearly labeled CI test artifact."
+
+      - name: Create safety notice for test artifact
+        shell: pwsh
+        run: |
+          @'
+          MR. KIMBO Optimizer v17 - CI TEST ARTIFACT ONLY
+          
+          WARNING: This build uses inherited Hellzerg Optimizer v16.7 source with a provisional toggle compatibility guard.
+          It is NOT MR. KIMBO Optimizer v17.0 and has not been functionally or security tested.
+          The legacy application may request administrator privileges and contains features that disable
+          Windows Update, Windows Security/Defender, System Restore and other system services.
+          DO NOT RUN ON YOUR GAMING/STREAMING PC OR ANY PRODUCTION COMPUTER.
+          This package exists only for isolated lab or VM review, not a public release.
+          License: GPL-3.0. Original project: https://github.com/hellzerg/optimizer
+          '@ | Set-Content -LiteralPath 'bin/release/READ-ME-FIRST.txt' -Encoding utf8
+
+      - name: Upload untested legacy binary for isolated analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: V17-FOUNDATION-VM-TEST-ONLY
+          path: |
+            bin/release/*.exe
+            bin/release/*.dll
+            bin/release/*.config
+            bin/release/READ-ME-FIRST.txt
+          if-no-files-found: error
+          retention-days: 7
