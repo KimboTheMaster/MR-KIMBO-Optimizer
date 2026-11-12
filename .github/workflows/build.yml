@@ -32,6 +32,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Inspect-LegacyRisk.ps1
 
+      - name: Verify toggle compatibility decisions and registrations
+        shell: pwsh
+        run: ./scripts/Test-ToggleCompatibility.ps1
+
       - name: Restore legacy NuGet packages
         shell: pwsh
         run: nuget restore Optimizer.sln -NonInteractive
@@ -55,7 +59,7 @@ jobs:
           @'
           MR. KIMBO Optimizer v17 - CI TEST ARTIFACT ONLY
           
-          WARNING: This file is the unmodified Hellzerg Optimizer v16.7 code compiled by GitHub Actions.
+          WARNING: This build uses inherited Hellzerg Optimizer v16.7 source with a provisional toggle compatibility guard.
           It is NOT MR. KIMBO Optimizer v17.0 and has not been functionally or security tested.
           The legacy application may request administrator privileges and contains features that disable
           Windows Update, Windows Security/Defender, System Restore and other system services.
@@ -67,7 +71,7 @@ jobs:
       - name: Upload untested legacy binary for isolated analysis
         uses: actions/upload-artifact@v4
         with:
-          name: LEGACY-16.7-UNTESTED-NOT-V17
+          name: V17-FOUNDATION-VM-TEST-ONLY
           path: |
             bin/release/*.exe
             bin/release/*.dll
